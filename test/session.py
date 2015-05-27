@@ -1,10 +1,10 @@
 import webtest
-import web
+import web3
 import tempfile
 
 class SessionTest(webtest.TestCase):
     def setUp(self):
-        app = web.auto_application()
+        app = web3.auto_application()
         session = self.make_session(app)
         class count(app.page):
             def GET(self):
@@ -19,7 +19,7 @@ class SessionTest(webtest.TestCase):
         class redirect(app.page):
             def GET(self):
                 session.request_token = '123'
-                raise web.redirect('/count')
+                raise web3.redirect('/count')
 
         class get_session(app.page):
             path = "/session/(.*)"
@@ -31,8 +31,8 @@ class SessionTest(webtest.TestCase):
         
     def make_session(self, app):
         dir = tempfile.mkdtemp()
-        store = web.session.DiskStore(tempfile.mkdtemp())
-        return web.session.Session(app, store, {'count': 0})
+        store = web3.session.DiskStore(tempfile.mkdtemp())
+        return web3.session.Session(app, store, {'count': 0})
         
     def testSession(self):
         b = self.app.browser() 
@@ -78,8 +78,8 @@ class DBSessionTest(SessionTest):
             + "    atime timestamp default (datetime('now','utc')),"
             + "    data text)"
         )
-        store = web.session.DBStore(db, 'session')
-        return web.session.Session(app, store, {'count': 0})
+        store = web3.session.DBStore(db, 'session')
+        return web3.session.Session(app, store, {'count': 0})
 
     def tearDown(self):
         # there might be some error with the current connection, delete from a new connection

@@ -3,10 +3,11 @@
 
 from __future__ import generators
 
-__version__ = "0.37"
+__version__ = "3.0"
 __author__ = [
     "Aaron Swartz <me@aaronsw.com>",
     "Anand Chitipothu <anandology@gmail.com>"
+    "Alexander Demsky <a@demsky.ru>"
 ]
 __license__ = "public domain"
 __contributors__ = "see http://webpy.org/changes"

@@ -2,7 +2,7 @@
 Web application
 (from web.py)
 """
-import webapi as web
+import webapi as w3
 import webapi, wsgi, utils
 import debugerror
 import httpserver
@@ -43,7 +43,7 @@ class application:
     """
     def __init__(self, mapping=(), fvars={}, autoreload=None):
         if autoreload is None:
-            autoreload = web.config.get('debug', False)
+            autoreload = w3.config.get('debug', False)
         self.init_mapping(mapping)
         self.fvars = fvars
         self.processors = []
@@ -92,19 +92,19 @@ class application:
                     pass
                     
     def _load(self):
-        web.ctx.app_stack.append(self)
+        w3.ctx.app_stack.append(self)
         
     def _unload(self):
-        web.ctx.app_stack = web.ctx.app_stack[:-1]
+        w3.ctx.app_stack = w3.ctx.app_stack[:-1]
         
-        if web.ctx.app_stack:
+        if w3.ctx.app_stack:
             # this is a sub-application, revert ctx to earlier state.
-            oldctx = web.ctx.get('_oldctx')
+            oldctx = w3.ctx.get('_oldctx')
             if oldctx:
-                web.ctx.home = oldctx.home
-                web.ctx.homepath = oldctx.homepath
-                web.ctx.path = oldctx.path
-                web.ctx.fullpath = oldctx.fullpath
+                w3.ctx.home = oldctx.home
+                w3.ctx.homepath = oldctx.homepath
+                w3.ctx.path = oldctx.path
+                w3.ctx.fullpath = oldctx.fullpath
                 
     def _cleanup(self):
         # Threads can be recycled by WSGI servers.
@@ -213,7 +213,7 @@ class application:
             env['wsgi.input'] = StringIO.StringIO(q)
             if not env.get('CONTENT_TYPE', '').lower().startswith('multipart/') and 'CONTENT_LENGTH' not in env:
                 env['CONTENT_LENGTH'] = len(q)
-        response = web.storage()
+        response = w3.storage()
         def start_response(status, headers):
             response.status = status
             response.headers = dict(headers)
@@ -226,7 +226,7 @@ class application:
         return browser.AppBrowser(self)
 
     def handle(self):
-        fn, args = self._match(self.mapping, web.ctx.path)
+        fn, args = self._match(self.mapping, w3.ctx.path)
         return self._delegate(fn, self.fvars, args)
         
     def handle_with_processors(self):
@@ -237,12 +237,12 @@ class application:
                     return p(lambda: process(processors))
                 else:
                     return self.handle()
-            except web.HTTPError:
+            except w3.HTTPError:
                 raise
             except (KeyboardInterrupt, SystemExit):
                 raise
             except:
-                print >> web.debug, traceback.format_exc()
+                print(traceback.format_exc(), file=w3.debug)
                 raise self.internalerror()
         
         # processors must be applied in the resvere order. (??)
@@ -273,20 +273,20 @@ class application:
             self.load(env)
             try:
                 # allow uppercase methods only
-                if web.ctx.method.upper() != web.ctx.method:
-                    raise web.nomethod()
+                if w3.ctx.method.upper() != w3.ctx.method:
+                    raise w3.nomethod()
 
                 result = self.handle_with_processors()
                 if is_generator(result):
                     result = peep(result)
                 else:
                     result = [result]
-            except web.HTTPError, e:
+            except w3.HTTPError, e:
                 result = [e.data]
 
-            result = web.safestr(iter(result))
+            result = w3.safestr(iter(result))
 
-            status, headers = web.ctx.status, web.ctx.headers
+            status, headers = w3.ctx.status, w3.ctx.headers
             start_resp(status, headers)
             
             def cleanup():
@@ -379,7 +379,7 @@ class application:
      
     def load(self, env):
         """Initializes ctx using env."""
-        ctx = web.ctx
+        ctx = w3.ctx
         ctx.clear()
         ctx.status = '200 OK'
         ctx.headers = []
@@ -429,18 +429,18 @@ class application:
 
     def _delegate(self, f, fvars, args=[]):
         def handle_class(cls):
-            meth = web.ctx.method
+            meth = w3.ctx.method
             if meth == 'HEAD' and not hasattr(cls, meth):
                 meth = 'GET'
             if not hasattr(cls, meth):
-                raise web.nomethod(cls)
+                raise w3.nomethod(cls)
             tocall = getattr(cls(), meth)
             return tocall(*args)
             
         def is_class(o): return isinstance(o, (types.ClassType, type))
             
         if f is None:
-            raise web.notfound()
+            raise w3.notfound()
         elif isinstance(f, application):
             return f.handle_with_processors()
         elif is_class(f):
@@ -448,11 +448,11 @@ class application:
         elif isinstance(f, basestring):
             if f.startswith('redirect '):
                 url = f.split(' ', 1)[1]
-                if web.ctx.method == "GET":
-                    x = web.ctx.env.get('QUERY_STRING', '')
+                if w3.ctx.method == "GET":
+                    x = w3.ctx.env.get('QUERY_STRING', '')
                     if x:
                         url += '?' + x
-                raise web.redirect(url)
+                raise w3.redirect(url)
             elif '.' in f:
                 mod, cls = f.rsplit('.', 1)
                 mod = __import__(mod, None, None, [''])
@@ -463,7 +463,7 @@ class application:
         elif hasattr(f, '__call__'):
             return f()
         else:
-            return web.notfound()
+            return w3.notfound()
 
     def _match(self, mapping, value):
         for pat, what in mapping:
@@ -489,18 +489,18 @@ class application:
         
         @@Any issues with when used with yield?
         """
-        web.ctx._oldctx = web.storage(web.ctx)
-        web.ctx.home += dir
-        web.ctx.homepath += dir
-        web.ctx.path = web.ctx.path[len(dir):]
-        web.ctx.fullpath = web.ctx.fullpath[len(dir):]
+        w3.ctx._oldctx = w3.storage(w3.ctx)
+        w3.ctx.home += dir
+        w3.ctx.homepath += dir
+        w3.ctx.path = w3.ctx.path[len(dir):]
+        w3.ctx.fullpath = w3.ctx.fullpath[len(dir):]
         return app.handle_with_processors()
             
     def get_parent_app(self):
-        if self in web.ctx.app_stack:
-            index = web.ctx.app_stack.index(self)
+        if self in w3.ctx.app_stack:
+            index = w3.ctx.app_stack.index(self)
             if index > 0:
-                return web.ctx.app_stack[index-1]
+                return w3.ctx.app_stack[index-1]
         
     def notfound(self):
         """Returns HTTPError with '404 not found' message"""
@@ -508,18 +508,18 @@ class application:
         if parent:
             return parent.notfound()
         else:
-            return web._NotFound()
+            return w3._NotFound()
             
     def internalerror(self):
         """Returns HTTPError with '500 internal error' message"""
         parent = self.get_parent_app()
         if parent:
             return parent.internalerror()
-        elif web.config.get('debug'):
+        elif w3.config.get('debug'):
             import debugerror
             return debugerror.debugerror()
         else:
-            return web._InternalError()
+            return w3._InternalError()
 
 class auto_application(application):
     """Application similar to `application` but urls are constructed 
@@ -579,7 +579,7 @@ class subdomain_application(application):
         'not found'
     """
     def handle(self):
-        host = web.ctx.host.split(':')[0] #strip port
+        host = w3.ctx.host.split(':')[0] #strip port
         fn, args = self._match(self.mapping, host)
         return self._delegate(fn, self.fvars, args)
         
@@ -679,9 +679,9 @@ def autodelegate(prefix=''):
             try:
                 return getattr(self, func)(*args)
             except TypeError:
-                raise web.notfound()
+                raise w3.notfound()
         else:
-            raise web.notfound()
+            raise w3.notfound()
     return internal
 
 class Reloader:
