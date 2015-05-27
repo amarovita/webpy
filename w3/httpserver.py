@@ -80,7 +80,7 @@ def runbasic(func, server_address=("0.0.0.0", 8080)):
                 except socket.timeout as socket_timeout: 
                     return
             except:
-                print(traceback.format_exc(), end=' ', file=web.debug)
+                print(traceback.format_exc(), end=' ', file=w3.debug)
 
             if (not self.wsgi_sent_headers):
                 # We must write out something!
@@ -168,8 +168,8 @@ def WSGIServer(server_address, wsgi_app):
     # Default values of wsgiserver.ssl_adapters uses cherrypy.wsgiserver
     # prefix. Overwriting it make it work with web.wsgiserver.
     wsgiserver.ssl_adapters = {
-        'builtin': 'web.wsgiserver.ssl_builtin.BuiltinSSLAdapter',
-        'pyopenssl': 'web.wsgiserver.ssl_pyopenssl.pyOpenSSLAdapter',
+        'builtin': 'w3.wsgiserver.ssl_builtin.BuiltinSSLAdapter',
+        'pyopenssl': 'w3.wsgiserver.ssl_pyopenssl.pyOpenSSLAdapter',
     }
     
     server = wsgiserver.CherryPyWSGIServer(server_address, wsgi_app, server_name="localhost")
@@ -306,7 +306,7 @@ class LogMiddleware:
         return self.app(environ, xstart_response)
              
     def log(self, status, environ):
-        outfile = environ.get('wsgi.errors', web.debug)
+        outfile = environ.get('wsgi.errors', w3.debug)
         req = environ.get('PATH_INFO', '_')
         protocol = environ.get('ACTUAL_SERVER_PROTOCOL', '-')
         method = environ.get('REQUEST_METHOD', '-')

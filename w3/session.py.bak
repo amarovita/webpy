@@ -7,7 +7,7 @@ import os, time, datetime, random, base64
 import os.path
 from copy import deepcopy
 try:
-    import pickle as pickle
+    import cPickle as pickle
 except ImportError:
     import pickle
 try:
@@ -17,15 +17,15 @@ except ImportError:
     import sha
     sha1 = sha.new
 
-from . import utils
-from . import webapi as w3
+import utils
+import webapi as web
 
 __all__ = [
     'Session', 'SessionExpired',
     'Store', 'DiskStore', 'DBStore',
 ]
 
-w3.config.session_parameters = utils.storage({
+web.config.session_parameters = utils.storage({
     'cookie_name': 'webpy_session_id',
     'cookie_domain': None,
     'cookie_path' : None,
@@ -38,9 +38,9 @@ w3.config.session_parameters = utils.storage({
     'secure': False
 })
 
-class SessionExpired(w3.HTTPError): 
+class SessionExpired(web.HTTPError): 
     def __init__(self, message):
-        w3.HTTPError.__init__(self, '200 OK', {}, data=message)
+        web.HTTPError.__init__(self, '200 OK', {}, data=message)
 
 class Session(object):
     """Session management for web.py
@@ -54,7 +54,7 @@ class Session(object):
         self.store = store
         self._initializer = initializer
         self._last_cleanup_time = 0
-        self._config = utils.storage(w3.config.session_parameters)
+        self._config = utils.storage(web.config.session_parameters)
         self._data = utils.threadeddict()
         
         self.__getitem__ = self._data.__getitem__
@@ -95,7 +95,7 @@ class Session(object):
         cookie_domain = self._config.cookie_domain
         cookie_path = self._config.cookie_path
         httponly = self._config.httponly
-        self.session_id = w3.cookies().get(cookie_name)
+        self.session_id = web.cookies().get(cookie_name)
 
         # protection against session_id tampering
         if self.session_id and not self._valid_session_id(self.session_id):
@@ -116,7 +116,7 @@ class Session(object):
                 elif hasattr(self._initializer, '__call__'):
                     self._initializer()
  
-        self.ip = w3.ctx.ip
+        self.ip = web.ctx.ip
 
     def _check_expiry(self):
         # check for expiry
@@ -128,7 +128,7 @@ class Session(object):
 
     def _validate_ip(self):
         # check for change of IP
-        if self.session_id and self.get('ip', None) != w3.ctx.ip:
+        if self.session_id and self.get('ip', None) != web.ctx.ip:
             if not self._config.ignore_change_ip:
                return self.expired() 
     
@@ -145,7 +145,7 @@ class Session(object):
         cookie_path = self._config.cookie_path
         httponly = self._config.httponly
         secure = self._config.secure
-        w3.setcookie(cookie_name, session_id, expires=expires, domain=cookie_domain, httponly=httponly, secure=secure, path=cookie_path)
+        web.setcookie(cookie_name, session_id, expires=expires, domain=cookie_domain, httponly=httponly, secure=secure, path=cookie_path)
     
     def _generate_session_id(self):
         """Generate a random id for session"""
@@ -154,7 +154,7 @@ class Session(object):
             rand = os.urandom(16)
             now = time.time()
             secret_key = self._config.secret_key
-            session_id = sha1("%s%s%s%s" %(rand, now, utils.safestr(w3.ctx.ip), secret_key))
+            session_id = sha1("%s%s%s%s" %(rand, now, utils.safestr(web.ctx.ip), secret_key))
             session_id = session_id.hexdigest()
             if session_id not in self.store:
                 break
@@ -236,7 +236,7 @@ class DiskStore(Store):
 
     def _get_path(self, key):
         if os.path.sep in key: 
-            raise ValueError("Bad key: %s" % repr(key))
+            raise ValueError, "Bad key: %s" % repr(key)
         return os.path.join(self.root, key)
     
     def __contains__(self, key):
@@ -249,7 +249,7 @@ class DiskStore(Store):
             pickled = open(path).read()
             return self.decode(pickled)
         else:
-            raise KeyError(key)
+            raise KeyError, key
 
     def __setitem__(self, key, value):
         path = self._get_path(key)
@@ -348,7 +348,7 @@ class ShelfStore:
 
     def cleanup(self, timeout):
         now = time.time()
-        for k in list(self.shelf.keys()):
+        for k in self.shelf.keys():
             atime, v = self.shelf[k]
             if now - atime > timeout :
                 del self[k]
